@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.qa</groupId>
+    <artifactId>api-automation-karate</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>qa-api-automation-karate</name>
+    <description>Arquitectura de automatizacion de APIs con Karate</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+
+        <karate.version>1.4.1</karate.version>
+        <!-- Ambiente por defecto. Se puede sobreescribir con -Dkarate.env=qa|prod -->
+        <karate.env>dev</karate.env>
+        <!-- Identificador de build para el reporte HTML. La CI lo sobreescribe con -Dbuild.number=... -->
+        <build.number>local</build.number>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.intuit.karate</groupId>
+            <artifactId>karate-junit5</artifactId>
+            <version>${karate.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>src/test/java</directory>
+                <excludes>
+                    <exclude>**/*.java</exclude>
+                </excludes>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <!-- Por defecto "mvn test" corre solo el runner maestro (regresion completa).
+                         Los runners de modulo/smoke se invocan puntualmente con -Dtest=NombreRunner -->
+                    <includes>
+                        <include>**/TestRunner.java</include>
+                    </includes>
+                    <systemPropertyVariables>
+                        <karate.env>${karate.env}</karate.env>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <!-- Genera un dashboard HTML consolidado a partir de los reportes cucumber-json que
+                 Karate escribe en target/karate-reports (ver Runner.outputCucumberJson(true)
+                 en los runners de src/test/java/runners) -->
+            <plugin>
+                <groupId>net.masterthought</groupId>
+                <artifactId>maven-cucumber-reporting</artifactId>
+                <version>5.7.7</version>
+                <executions>
+                    <execution>
+                        <id>execution</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <projectName>qa-api-automation-karate</projectName>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <inputDirectory>${project.build.directory}/karate-reports</inputDirectory>
+                            <jsonFiles>
+                                <jsonFile>*.json</jsonFile>
+                            </jsonFiles>
+                            <buildNumber>${build.number}</buildNumber>
+                            <skipEmptyJSONFiles>true</skipEmptyJSONFiles>
+                            <checkBuildResult>false</checkBuildResult>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

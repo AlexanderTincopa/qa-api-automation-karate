@@ -1,0 +1,57 @@
+name: Karate API Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente contra el que correr las pruebas'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Ejecutar pruebas Karate
+        id: karate
+        continue-on-error: true
+        run: >
+          mvn -B test
+          -Dkarate.env=${{ github.event.inputs.environment || 'qa' }}
+
+      - name: Generar reporte HTML consolidado
+        if: always()
+        run: mvn -B verify -DskipTests -Dbuild.number=${{ github.run_number }}
+
+      - name: Subir reportes como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-reports-${{ github.run_number }}
+          path: |
+            target/karate-reports/
+            target/cucumber-html-reports/
+          retention-days: 15
+
+      - name: Marcar el job como fallido si las pruebas fallaron
+        if: steps.karate.outcome == 'failure'
+        run: exit 1
